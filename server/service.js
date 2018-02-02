@@ -1,12 +1,9 @@
 'use strict';
-
+require('dotenv').config();
 const express = require('express');
 const request = require('superagent');
+const moment = require('moment');
 const service = express();
-
-//AIzaSyC9JlltA_3UMVi2NNsdC9TzpWBMcnmRW0c
-//https://maps.googleapis.com/maps/api/timezone/json?location=39.6034810,-119.6822510&timestamp=1331161200&key=YOUR_API_KEY
-
 
 service.get('/service/:location', (req, res, next) => {
   request(`https://maps.googleapis.com/maps/api/geocode/json?address=${req.params.location}&key=${process.env.GEOCODING_API_KEY}`, function(err, response) {
@@ -14,8 +11,20 @@ service.get('/service/:location', (req, res, next) => {
       console.log(err);
       return res.sendStatus(500);
     }
-
-    res.json({results: response.body.results[0].geometry.location});
+    const location = response.body.results[0].geometry.location;
+    const timestamp = +moment().format('X');
+    console.log(timestamp)
+    request(`https://maps.googleapis.com/maps/api/timezone/json?location=${location.lat},${location.lng}&timestamp=${timestamp}&key=${process.env.TIMEZONE_API_TOKEN}`, function(err, response) {
+      if(err) {
+        console.log(err);
+        return res.sendStatus(500);
+      }
+      const result = response.body;
+      console.log(result);
+      const theTime = moment.unix(timestamp + result.dstOffset + result.rawOffset).format('hh:mm:ss a');
+      console.log(theTime);
+      res.json({result: theTime});
+    })
   });
 });
 
